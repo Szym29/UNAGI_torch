@@ -1,0 +1,200 @@
+Metadata-Version: 2.1
+Name: UNAGI
+Version: 0.1.0
+Summary: A Python package for UNAGI
+Home-page: https://github.com/mcgilldinglab/UNAGI
+Author: Yumin Zheng
+Author-email: Yumin Zheng <yumin.zheng@mail.mcgill.ca>
+License: UNAGI - Dual Licensing
+        
+        
+        
+        PART 1: Open Source License for Academic Use
+        ------------------------------------------------------
+        UNAGI is released under the MIT License for academic and non-commercial
+        use. This portion of the software is released as open source under the terms of 
+        the following license:
+        
+        MIT License
+        
+        Copyright (c) 2023 Yumin Zheng
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+        
+        
+        
+        PART 2: Commercial License
+        ------------------------------------------------------
+        For commercial use of UNAGI, a commercial license is required. This 
+        includes any use of UNAGI in a commercial entity or for commercial 
+        purposes, including but not limited to integration into commercial products, 
+        use in a commercial environment, or redistribution in a commercial context.
+        If you are interested in using UNAGI for commercial purposes, please 
+        contact us at yumin.zheng@mail.mcgill.ca for more information about obtaining 
+        a commercial license.
+        
+        
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE.txt
+Requires-Dist: recommonmark
+Requires-Dist: h5py>=3.9.0
+Requires-Dist: idna>=3.4
+Requires-Dist: igraph>=0.10.7
+Requires-Dist: igraph<=0.11
+Requires-Dist: networkx>=3.1
+Requires-Dist: numba>=0.57.1
+Requires-Dist: numpy>=1.24.4
+Requires-Dist: pandas>=2.1.0
+Requires-Dist: parso>=0.8.3
+Requires-Dist: pillow>=9.4.0
+Requires-Dist: pip>=23.2.1
+Requires-Dist: psutil>=5.9.5
+Requires-Dist: ptyprocess>=0.7.0
+Requires-Dist: pure_eval>=0.2.2
+Requires-Dist: pycparser>=2.21
+Requires-Dist: pygments>=2.16.1
+Requires-Dist: pynndescent>=0.5.10
+Requires-Dist: pyopenssl>=23.2.0
+Requires-Dist: pyparsing>=3.1.1
+Requires-Dist: pysocks>=1.7.1
+Requires-Dist: python-dateutil>=2.8.2
+Requires-Dist: python-igraph>=0.10.8
+Requires-Dist: pytz>=2023.3.post1
+Requires-Dist: pyzmq>=25.1.1
+Requires-Dist: lightning==2.0.8
+Requires-Dist: numpyro==0.13.0
+Requires-Dist: requests>=2.31.0
+Requires-Dist: scanpy>=1.9.5
+Requires-Dist: scikit-learn>=1.3.0
+Requires-Dist: scipy>=1.9.3
+Requires-Dist: seaborn>=0.12.2
+Requires-Dist: setuptools>=68.0.0
+Requires-Dist: six>=1.16.0
+Requires-Dist: stack_data>=0.6.2
+Requires-Dist: statsmodels>=0.14.0
+Requires-Dist: stdlib-list>=0.8.0
+Requires-Dist: sympy>=1.11.1
+Requires-Dist: tbb>=2021.8.0
+Requires-Dist: texttable>=1.6.7
+Requires-Dist: threadpoolctl>=3.2.0
+Requires-Dist: torchaudio>=2.0.0
+Requires-Dist: torchvision>=0.15.0
+Requires-Dist: tornado>=6.3.3
+Requires-Dist: tqdm>=4.66.1
+Requires-Dist: traitlets>=5.9.0
+Requires-Dist: typing_extensions>=4.7.1
+Requires-Dist: tzdata>=2023c
+Requires-Dist: umap-learn>=0.5.3
+Requires-Dist: wcwidth>=0.2.6
+Requires-Dist: wheel>=0.38.4
+Requires-Dist: pyro-ppl>=1.8.6
+Requires-Dist: scvi-tools>=1.0.3
+Requires-Dist: leidenalg>=0.10.1
+Provides-Extra: doc
+Requires-Dist: sphinx<4; extra == "doc"
+Requires-Dist: sphinx-autodoc-typehints<1.12; extra == "doc"
+Requires-Dist: sphinx-copybutton; extra == "doc"
+Requires-Dist: nbsphinx; extra == "doc"
+Requires-Dist: sphinx-rtd-theme; extra == "doc"
+Requires-Dist: ipython; extra == "doc"
+Requires-Dist: jinja2<3.1; extra == "doc"
+Requires-Dist: prompt-toolkit<3.0.0; extra == "doc"
+Requires-Dist: myst-nb; extra == "doc"
+Requires-Dist: myst-parser; extra == "doc"
+Requires-Dist: recommonmark; extra == "doc"
+
+# UNAGI
+
+UNAGI: Deep Generative Model for Deciphering Cellular Dynamics and In-Silico Drug Discovery in Complex Diseases
+
+Full documentations and tutorials can be accessed at [UNAGI-docs](https://unagi-docs.readthedocs.io/en/latest/index.html).
+
+## Overview 
+<img title="UNAGI Overview" alt="Alt text" src="UNAGI_overview.png">
+UNAGI is a comprehensive unsupervised in-silico cellular dynamics and drug discovery framework. UNAGI adeptly deciphers cellular dynamics from human disease time-series single-cell data and facilitates in-silico drug perturbations to earmark therapeutic targets and drugs potentially active against complex human diseases. All outputs, from cellular dynamics to drug perturbations, are rendered in an interactive visual format within the UNAGI framework. Nestled within a deep learning architecture Variational Autoencoder-Generative adversarial network (VAE-GAN), UNAGI is tailored to manage diverse data distributions frequently arising post-normalization. It also innovatively employs disease-informed cell embeddings, harnessing crucial gene markers derived from the disease dataset. On achieving cell embeddings, UNAGI fabricates a graph that chronologically links cell clusters across disease stages, subsequently deducing the gene regulatory network orchestrating these connections. UNAGI is primed to leverage time-series data, enabling a precise portrayal of cellular dynamics and a superior capture of disease markers and regulators. Lastly, the deep generative prowess of UNAGI framework powers an in-silico drug perturbation module, simulating drug impacts by manipulating the latent space informed by real drug perturbation data from the CMAP database. This allows for an empirical assessment of drug efficacy based on cellular shifts towards healthier states following drug treatment. The in-silico perturbation module can similarly be utilized to investigate therapeutic pathways, employing an approach akin to the one used in drug perturbation analysis.
+
+## Key Capabilities
+-   Learning disease-specific cell embeddings through iterative training processes.
+
+-   Constructing temporal dynamic graphs from time-series single-cell data and reconstructing temporal gene regulatory networks to decipher cellular dynamics.
+
+-   Identifying dynamic and hierarchical static markers to profile cellular dynamics, both longitudinally and at specific time points.
+
+-   Performing *in-silico* perturbations to identify potential therapeutic pathways and drug/compound candidates.
+
+## Installation
+
+UNAGI installation
+```
+git clone https://github.com/mcgilldinglab/UNAGI.git
+pip install scUNAGI
+```
+
+### Prerequisites
+-   Python >=3.9 (Python3.9 is recommanded)
+-   pyro-ppl>=1.8.6
+-   scanpy>=1.9.5
+-   **anndata==0.8.0** 
+-   torch >= 2.0.0
+-   matplotlib>=3.7.1
+
+**Required files**
+
+Preprocessed CMAP database: [One Drive](https://mcgill-my.sharepoint.com/:u:/g/personal/yumin_zheng_mail_mcgill_ca/EazTbqa3vKtJnwd6-DL87GUBaAwEA8AXaHHCdEXtS1bPFg?e=Y5A2WO)
+-    Requried data to run UNAGI, move it to the folder containing UNAGI and idrem.
+
+Preprocessed IPF snRNA-seq dataset: [One Drive](https://mcgill-my.sharepoint.com/:f:/g/personal/yumin_zheng_mail_mcgill_ca/EhUPO3Ip0IhCh0kz-Uply_MBzksNoX9N6HDEgC_dUHbCkg?e=biVLuV)
+-    UNAGI outcomes to reproduce the figures and tables generated for the manuscript.
+
+Example dataset: [Link.](https://github.com/mcgilldinglab/UNAGI/tree/main/UNAGI/data/example)
+
+**iDREM installation:**
+
+```
+git clone https://github.com/phoenixding/idrem.git
+```
+
+**iDREM prerequisites:**
+
+Install the iDREM to the source folder of UNAGI
+
+-   Java
+    To use iDREM, a version of Java 1.7 or later must be installed. If Java 1.7 or later is not currently installed, please refer to http://www.java.com for installation instructions.
+
+-   JavaScript
+    To enable the interactive visualization powered by Javascript, please make sure that you have Internet connection.
+    (The users are still able to run the software off-line, but Internet access is needed to view the result interactively.)
+
+## Tutorials:
+
+### Dataset preparation
+
+[Prepare datasets to run UNAGI.](https://github.com/mcgilldinglab/UNAGI/blob/main/tutorials/dataset_preparation.ipynb)
+
+### Training and analysis on example dataset
+
+[UNAGI training and analysis on an example dataset.](https://github.com/mcgilldinglab/UNAGI/blob/main/tutorials/run_UNAGI_using_example_dataset.ipynb)
+
+### Visualize the results of UNAGI method
+
+[Visualization on an example dataset.](https://github.com/mcgilldinglab/UNAGI/blob/main/tutorials/visualize_UNAGI_results_example_dataset.ipynb)
+
+## Contact
+[Yumin Zheng](mailto:yumin.zheng@mail.mcgill.ca), [Naftali Kaminski](mailto:naftali.kaminski@yale.edu), [Jun Ding](mailto:jun.ding@mcgill.ca)
