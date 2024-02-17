@@ -41,8 +41,8 @@ class UNAGI:
         threads: int
             the number of threads for the cell graph construction, default is 20.
         '''
-        if total_stage <= 2:
-            raise ValueError('The total number of stages should be larger than 2')
+        if total_stage < 2:
+            raise ValueError('The total number of stages should be larger than 1')
         
         if os.path.isfile(data_path):
             self.data_folder = os.path.dirname(data_path)
@@ -258,7 +258,13 @@ class UNAGI:
                     unagi_runner.set_up_iDREM(Minimum_Absolute_Log_Ratio_Expression = self.iDREM_parameters['Minimum_Absolute_Log_Ratio_Expression'], Convergence_Likelihood = self.iDREM_parameters['Convergence_Likelihood'], Minimum_Standard_Deviation = self.iDREM_parameters['Minimum_Standard_Deviation'])
             unagi_runner.run()
 
-  
+    def test_geneweihts(self,iteration,idrem_dir):
+        iteration = int(iteration)
+        unagi_runner = UNAGI_runner(self.data_folder,self.ns,iteration,self.unagi_trainer,idrem_dir)
+        unagi_runner.set_up_species(self.species)
+        unagi_runner.load_stage_data()
+        unagi_runner.update_gene_weights_table()
+
     def analyse_UNAGI(self,data_path,iteration,progressionmarker_background_sampling_times,target_dir=None,customized_drug=None,cmap_dir=None):
         '''
         Perform downstream tasks including dynamic markers discoveries, hierarchical markers discoveries, pathway perturbations and compound perturbations.

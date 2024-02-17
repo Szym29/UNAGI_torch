@@ -49,7 +49,7 @@ class UNAGI_runner:
             stageadata.append(adata)
         self.all_in_one = get_all_adj_adata(stageadata)
         self.adata_stages = stageadata
-        
+        self.genenames = np.array(list(self.adata_stages[0].var.index.values))
     def annotate_stage_data(self, adata,stage):
         '''
         Retreive the latent representations of given single cell data. Performing clusterings, generating the UMAPs, annotating the cell types and adding the top genes and cell types attributes.
@@ -238,8 +238,12 @@ class UNAGI_runner:
         
         '''
         TFs = getTFs(os.path.join(self.data_path,str(self.iteration)+'/'+'idremResults'+'/'),total_stage=self.total_stage)
+        np.save('test_TFs.npy',np.array(TFs,dtype=object))
         scope = getTargetGenes(os.path.join(self.data_path,str(self.iteration)+'/'+'idremResults'+'/'),topN)
+        np.save('test_scope.npy',np.array(scope,dtype=object))
+        self.averageValues = np.load(os.path.join(self.data_path, '%d/averageValues.npy'%self.iteration),allow_pickle=True)
         p = matchTFandTGWithFoldChange(TFs,scope,self.averageValues,get_data_file_path('human_encode.txt'),self.genenames,self.total_stage)
+        np.save('test_p.npy',np.array(p,dtype=object))
         #np.save('../data/mes/'+str(iteration)+'/tfinfo.npy',np.array(p))
         updateLoss = updataGeneTablesWithDecay(self.data_path,str(self.iteration),p,self.total_stage)
     def build_iteration_dataset(self):
