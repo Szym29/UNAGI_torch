@@ -10,7 +10,7 @@ import gc
 from .utils.gcn_utils import get_gcn_exp
 from .train.runner import UNAGI_runner
 import torch
-from .model.models import VAE,Discriminator
+from .model.models import VAE,Discriminator,Plain_VAE
 from .UNAGI_analyst import analyst
 from .train.trainer import UNAGI_trainer
 class UNAGI:
@@ -105,7 +105,9 @@ class UNAGI:
                  graph_dim=1024,
                  BATCHSIZE=512,
                  max_iter=10,
-                 GPU=False):
+                 GPU=False,
+                 adversarial=True,
+                 GCN=True):
         '''
         Set up the training parameters and the model parameters.
         
@@ -162,8 +164,15 @@ class UNAGI:
         #if self.input is not existed then raised error
         if self.input_dim is None:
             raise ValueError('Please use setup_data function to prepare the data first')
-        self.model = VAE(self.input_dim, self.hidden_dim,self.graph_dim, self.latent_dim,beta=1,distribution=self.dist)
-        self.dis_model = Discriminator(self.input_dim)
+        if GCN:
+            self.model = VAE(self.input_dim, self.hidden_dim,self.graph_dim, self.latent_dim,beta=1,distribution=self.dist)
+        else:
+            self.model = Plain_VAE(self.input_dim, self.hidden_dim,self.graph_dim, self.latent_dim,beta=1,distribution=self.dist)
+        self.adversarial = adversarial
+        if self.adversarial:
+            self.dis_model = Discriminator(self.input_dim)
+        else:
+            self.dis_model = None
         self.unagi_trainer = UNAGI_trainer(self.model,self.dis_model,self.task,self.BATCHSIZE,self.epoch_initial,self.epoch_iter,self.device,self.lr, self.lr_dis,cuda=self.GPU)
     def register_CPO_parameters(self,anchor_neighbors=10, max_neighbors=30, min_neighbors=5, resolution_min=0.8, resolution_max=1.2):
         '''
@@ -244,7 +253,7 @@ class UNAGI:
                 dir3 = os.path.join(self.data_folder , 'model_save')
                 initalcommand = 'mkdir '+ dir1 +' && mkdir '+dir2
                 p = subprocess.Popen(initalcommand, stdout=subprocess.PIPE, shell=True)
-            unagi_runner = UNAGI_runner(self.data_folder,self.ns,iteration,self.unagi_trainer,idrem_dir)
+            unagi_runner = UNAGI_runner(self.data_folder,self.ns,iteration,self.unagi_trainer,idrem_dir,adversarial=self.adversarial)
             unagi_runner.set_up_species(self.species)
             if self.CPO_parameters is not None:
                 if type (self.CPO_parameters) != dict:

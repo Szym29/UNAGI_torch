@@ -30,35 +30,35 @@ class UNAGI_trainer():
         self.lr = lr
         self.dis_model = dis_model
         self.lr_dis = lr_dis
-    def train_model(self,adata, vae,dis, train_loader,adj, geneWeights=None, use_cuda=True):
+    def train_model(self,adata, vae,dis, train_loader,adj, adversarial=True,geneWeights=None, use_cuda=True):
         # initialize loss accumulator
         epoch_loss = 0.
         criterion=nn.BCELoss().to(self.device)
         if use_cuda:
-            adj=adj.to(self.device)
+            if adj is not None:
+                adj=adj.to(self.device)
 
         
         placeholder = torch.zeros(adata.X.shape,dtype=torch.float32)
         optimizer_vae = optim.Adam(lr= self.lr,params=vae.parameters())
-            
-        optimizer_dis = optim.Adam(lr=self.lr_dis,params=dis.parameters()) 
+        if adversarial:
+            optimizer_dis = optim.Adam(lr=self.lr_dis,params=dis.parameters()) 
 
     # do a training epoch over each mini-batch x
         vae_loss = 0
         dis_loss = 0
         adversarial_loss = 0
         for i, [x,neighbourhoods,idx] in enumerate(train_loader): 
-            temp_x = placeholder.clone()
-            start = i*self.batch_size
-            if (1+i)*self.batch_size > len(adj):
-                end =  len(adj)
-            else:
-                end = (1+i)*self.batch_size
-            # neighbourhood = neighbourhoods[i]
-            neighbourhood = [item for sublist in neighbourhoods for item in sublist]
-            # neighbourhood = list(set([item for sublist in neighbourhoods for item in sublist]))
-            temp_x[neighbourhood] = torch.Tensor(adata.X)[neighbourhood]
-            x = temp_x
+            if neighbourhoods is not None:
+                temp_x = placeholder.clone()
+                start = i*self.batch_size
+                if (1+i)*self.batch_size > len(adj):
+                    end =  len(adj)
+                else:
+                    end = (1+i)*self.batch_size
+                neighbourhood = [item for sublist in neighbourhoods for item in sublist]
+                temp_x[neighbourhood] = torch.Tensor(adata.X)[neighbourhood]
+                x = temp_x
 
         # if on GPU put mini-batch into CUDA memory
             if self.cuda:
@@ -66,8 +66,12 @@ class UNAGI_trainer():
             if geneWeights is not None:
                 geneWeights1 = torch.tensor(transfer_to_ranking_score(geneWeights[idx].toarray()))
                 geneWeights1 = geneWeights1.to(self.device)
-                mu, dropout_logits, mu_, logvar_,_ = vae(x,adj,idx)
-                loss =  vae.loss_function(x[idx,:], mu, dropout_logits, mu_, logvar_,gene_weights=geneWeights1)
+                if neighbourhood is not None:
+                    mu, dropout_logits, mu_, logvar_,_ = vae(x,adj,idx)
+                    loss =  vae.loss_function(x[idx,:], mu, dropout_logits, mu_, logvar_,gene_weights=geneWeights1)
+                else:
+                    mu, dropout_logits, mu_, logvar_ = vae(x)
+                    loss =  vae.loss_function(x, mu, dropout_logits, mu_, logvar_,gene_weights=geneWeights1)
                 optimizer_vae.zero_grad()
                 loss.backward()
                 optimizer_vae.step()
@@ -80,46 +84,61 @@ class UNAGI_trainer():
         
             else:
                 #train the generator
-                mu, dropout_logits, mu_, logvar_,_ = vae(x,adj,idx)
-                loss =  vae.loss_function(x[idx,:], mu, dropout_logits, mu_, logvar_)
+                if neighbourhood is not None:
+                    mu, dropout_logits, mu_, logvar_,_ = vae(x,adj,idx)
+                    loss =  vae.loss_function(x[idx,:], mu, dropout_logits, mu_, logvar_)
+                else:
+                    mu, dropout_logits, mu_, logvar_ = vae(x)
+                    loss =  vae.loss_function(x, mu, dropout_logits, mu_, logvar_)
                 optimizer_vae.zero_grad()
                 loss.backward()
                 optimizer_vae.step()
                 vae_loss += loss.item()
+            if adversarial:
 
-            #discriminator loss
-            _,_,_,_,recons = vae(x,adj,idx)
-            zeros_label1=Variable(torch.zeros(end-start,1)).to(self.device)
-            ones_label = torch.ones((end-start,1)).to(self.device)
-            zeros_label = torch.zeros((end-start,1)).to(self.device)
-            output_real = dis(x[idx,:])
-            output_fake = dis(recons)
-            loss_real = criterion(output_real,ones_label)
-            loss_fake = criterion(output_fake,zeros_label)
-            loss_dis = loss_real + loss_fake
-            optimizer_dis.zero_grad()
-            loss_dis.backward()
-            optimizer_dis.step()
-            dis_loss += loss_dis.item()
-            
-            #tune the generator
-            _,_,_,_,recons = vae(x,adj,idx)
-            output_fake = dis(recons)
-            loss_adversarial = criterion(output_fake,ones_label)
-            optimizer_vae.zero_grad()
-            loss_adversarial.backward()
-            optimizer_vae.step()
-            adversarial_loss += loss_adversarial.item()
+                #discriminator loss
+                if neighbourhood is not None:
+                    _,_,_,_,recons = vae(x,adj,idx)
+                else:
+                    _,_,_,_,recons = vae(x)
+                zeros_label1=Variable(torch.zeros(end-start,1)).to(self.device)
+                ones_label = torch.ones((end-start,1)).to(self.device)
+                zeros_label = torch.zeros((end-start,1)).to(self.device)
+                if neighbourhood is not None:
+                    output_real = dis(x[idx,:])
+                else:
+                    output_real = dis(x)
+                output_fake = dis(recons)
+                loss_real = criterion(output_real,ones_label)
+                loss_fake = criterion(output_fake,zeros_label)
+                loss_dis = loss_real + loss_fake
+                optimizer_dis.zero_grad()
+                loss_dis.backward()
+                optimizer_dis.step()
+                dis_loss += loss_dis.item()
+                
+                #tune the generator
+                if neighbourhood is not None:
+                    _,_,_,_,recons = vae(x,adj,idx)
+                else:
+                    _,_,_,_,recons = vae(x)
+                output_fake = dis(recons)
+                loss_adversarial = criterion(output_fake,ones_label)
+                optimizer_vae.zero_grad()
+                loss_adversarial.backward()
+                optimizer_vae.step()
+                adversarial_loss += loss_adversarial.item()
 
             
 
         normalizer_train = len(train_loader.dataset)
         total_epoch_vae_loss = vae_loss / normalizer_train
-        total_epoch_dis_loss = dis_loss / normalizer_train
-        total_epoch_adversarial_loss = adversarial_loss / normalizer_train
         print('vae_loss', total_epoch_vae_loss)
-        print('dis_loss', total_epoch_dis_loss)
-        print('adversarial_loss', total_epoch_adversarial_loss)
+        if adversarial:
+            total_epoch_dis_loss = dis_loss / normalizer_train
+            total_epoch_adversarial_loss = adversarial_loss / normalizer_train
+            print('dis_loss', total_epoch_dis_loss)
+            print('adversarial_loss', total_epoch_adversarial_loss)
         return total_epoch_vae_loss
     def get_latent_representation(self,adata,iteration,target_dir):
         '''
@@ -166,7 +185,7 @@ class UNAGI_trainer():
         TZ = np.array(TZ)
         return z_locs, z_scales, TZ
 
-    def train(self, adata, iteration, target_dir, is_iterative=False):
+    def train(self, adata, iteration, target_dir, adversarial=True,is_iterative=False):
         
         assert 'X_pca' in adata.obsm.keys(), 'PCA is not performed'
         if 'X_pca' not in adata.obsm.keys():
@@ -175,7 +194,9 @@ class UNAGI_trainer():
         if 'gcn_connectivities' in adata.obsp.keys():
             adj = adata.obsp['gcn_connectivities']
             adj = adj.asformat('coo')
-        adj = setup_graph(adj)
+            adj = setup_graph(adj)
+        else:
+            adj = None
         if is_iterative:
             geneWeights = adata.layers['geneWeight']
             cell = H5ADataSet(adata)
@@ -194,19 +215,21 @@ class UNAGI_trainer():
             # dis = self.discriminator
             if os.path.exists(os.path.join(target_dir, 'model_save', self.modelName + '_' + str(iteration) + '.pth')):
                 print('load current iteration model....')
-                dis.load_state_dict(torch.load(os.path.join(target_dir, 'model_save/' + self.modelName + '_dis_' + str(iteration) + '.pth')))
+                if adversarial:
+                    dis.load_state_dict(torch.load(os.path.join(target_dir, 'model_save/' + self.modelName + '_dis_' + str(iteration) + '.pth')))
                 vae.load_state_dict(torch.load(os.path.join(target_dir, 'model_save/' + self.modelName + '_' + str(iteration) + '.pth')))
             else:
                 print('load last iteration model.....')
-            
-                dis.load_state_dict(torch.load(os.path.join(target_dir, 'model_save/' + self.modelName + '_dis_' + str(iteration-1) + '.pth')))
+                if adversarial:
+                    dis.load_state_dict(torch.load(os.path.join(target_dir, 'model_save/' + self.modelName + '_dis_' + str(iteration-1) + '.pth')))
                 vae.load_state_dict(torch.load(os.path.join(target_dir, 'model_save/' + self.modelName + '_' + str(iteration-1) + '.pth')))
         else:
             vae = self.model
             dis = self.dis_model
 
         vae.to(self.device)
-        dis.to(self.device)
+        if adversarial:
+            dis.to(self.device)
         if geneWeights is None and is_iterative:
             print('no geneWeight')
     
@@ -218,7 +241,7 @@ class UNAGI_trainer():
             adata.X = adata.X.toarray()
         for epoch in range(epoch_range):
             print(epoch)
-            total_epoch_loss_train = self.train_model(adata, vae,dis, cell_loader, adj, geneWeights=geneWeights if is_iterative else None, use_cuda=self.cuda)
+            total_epoch_loss_train = self.train_model(adata, vae,dis, cell_loader, adj, adversarial=adversarial,geneWeights=geneWeights if is_iterative else None, use_cuda=self.cuda)
             train_elbo.append(-total_epoch_loss_train)
             print("[epoch %03d]  average training loss: %.4f" % (epoch, total_epoch_loss_train))
             with open(os.path.join(target_dir, '%d/loss.txt' % (int(iteration))), "a+") as f:
@@ -227,5 +250,6 @@ class UNAGI_trainer():
         torch.save(vae.state_dict(), os.path.join(target_dir, 'model_save/' + self.modelName + '_' + str(iteration) + '.pth'))
         # torch.save(dis, os.path.join(target_dir, 'model_save/' + self.modelName + '_dis_' + str(iteration) + '.pth'))
         # torch.save(vae.state_dict(), os.path.join(target_dir, 'model_save/' + self.modelName + '_' + str(iteration) + '.pth'))
-        torch.save(dis.state_dict(), os.path.join(target_dir, 'model_save/' + self.modelName + '_dis_' + str(iteration) + '.pth'))
+        if adversarial:
+            torch.save(dis.state_dict(), os.path.join(target_dir, 'model_save/' + self.modelName + '_dis_' + str(iteration) + '.pth'))
     

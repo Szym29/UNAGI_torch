@@ -23,7 +23,7 @@ class UNAGI_runner:
     trainer: the trainer class to train the UNAGI model
     idrem_dir: the directory of the idrem software
     '''
-    def __init__(self,data_path,total_stage,iteration,trainer,idrem_dir):
+    def __init__(self,data_path,total_stage,iteration,trainer,idrem_dir,adversarial=True):
         self.data_path = data_path
         self.total_stage = total_stage
         self.iteration = iteration
@@ -34,6 +34,7 @@ class UNAGI_runner:
         self.setup_CPO = False
         self.species = None
         self.setup_IDREM = False
+        self.adversarial = adversarial
     def load_stage_data(self):
         '''
         Load the stage data from the data_path. The stage data will be stored in the adata_stages list. The all_in_one adata will be used for the UNAGI model training.
@@ -261,7 +262,7 @@ class UNAGI_runner:
             is_iterative = False
         else:
             is_iterative = True
-        self.trainer.train(self.all_in_one,self.iteration,target_dir=self.data_path,is_iterative=is_iterative)
+        self.trainer.train(self.all_in_one,self.iteration,target_dir=self.data_path,adversarial=self.adversarial,is_iterative=is_iterative)
         self.run_CPO()
         self.update_cell_attributes()
         self.build_temporal_dynamics_graph()

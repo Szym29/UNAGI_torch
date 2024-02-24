@@ -35,6 +35,8 @@ class H5ADataSet(Dataset):
         x=csc_matrix(self.data.X[idx])[0].toarray()[0]
         x=x.astype(np.float32)
         x_tensor=torch.from_numpy(x)
+        if 'gcn_connectivities' not in self.data.obsp.keys():
+            return x_tensor,None,idx
         return x_tensor,self.data.obsp['gcn_connectivities'][idx].indices.tolist(),idx#,self.data.obs['Sample.ID'][idx]
     def num_genes(self):
         return len(self.data.var)
