@@ -58,7 +58,8 @@ class Plain_encoder(nn.Module):
         else:
             h1 = F.softplus(self.BN(self.fc0(x)))
             h1 = F.softplus(self.BN1(self.fc1(h1)))
-        return self.fc21(h1), torch.sqrt(F.softplus(self.fc22(h1)))
+        # return self.fc21(h1), torch.sqrt(F.softplus(self.fc22(h1)))
+        return self.fc21(h1), self.fc22(h1)
 class Graph_encoder(nn.Module):
     def __init__(self, input_dim, hidden_dim, graph_dim, latent_dim):
         super(Graph_encoder, self).__init__()
@@ -84,7 +85,8 @@ class Graph_encoder(nn.Module):
             h0 = F.softplus(self.BN(self.fc_graph(x,adj)))
             # print(h0)
             h1 = F.softplus(self.BN1(self.fc1(h0)))
-        return self.fc21(h1), torch.sqrt(F.softplus(self.fc22(h1)))
+        # return self.fc21(h1), torch.sqrt(F.softplus(self.fc22(h1)))
+        return self.fc21(h1), self.fc22(h1)
 class VAE_decoder(nn.Module):
     def __init__(self, input_dim, hidden_dim, latent_dim,distribution):
         super(VAE_decoder, self).__init__()
@@ -245,7 +247,7 @@ class Plain_VAE(nn.Module):
     
 class VAE(Plain_VAE):
     def __init__(self, input_dim, hidden_dim, graph_dim, latent_dim,beta=1,distribution='zinb'):
-        super(VAE, self).__init__()
+        super(Plain_VAE, self).__init__()
         self.input_dim = input_dim
         self.beta = beta
         self.hidden_dim = hidden_dim

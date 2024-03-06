@@ -182,6 +182,7 @@ class UNAGI_trainer():
             TZ+=z.detach().cpu().numpy().tolist()
         z_locs = np.array(z_locs)
         z_scales = np.array(z_scales)
+        z_scales = np.exp(0.5 * z_scales)
         TZ = np.array(TZ)
         return z_locs, z_scales, TZ
 

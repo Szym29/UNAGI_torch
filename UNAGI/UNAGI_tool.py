@@ -234,7 +234,7 @@ class UNAGI:
         self.iDREM_parameters['Convergence_Likelihood'] = Convergence_Likelihood
         self.iDREM_parameters['Minimum_Standard_Deviation'] = Minimum_Standard_Deviation
 
-    def run_UNAGI(self,idrem_dir,transcription_factor_file):
+    def run_UNAGI(self,idrem_dir):
         '''
         The function to launch the model training. The model will be trained iteratively. The number of iterations is specified by the `max_iter` parameter in the `setup_training` function.
         
