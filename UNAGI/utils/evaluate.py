@@ -32,7 +32,7 @@ def run_metrics(adatas, cell_type_key, stage_key):
     stage_keys = adatas.obs[stage_key].unique().tolist()
     stage_keys = sorted(stage_keys)
     stage_keys = stage_keys[::-1]
-
+    total_stage = len(stage_keys)
     total_adata = 0
     count=0
     NMI = 0
@@ -72,18 +72,15 @@ def run_metrics(adatas, cell_type_key, stage_key):
         isolated_asws += isolated_asw
         isolated_labels_f1s += isolated_f1
         NMI += nmi
-        silhouettes+=silhouette
+        silhouettes += silhouette
         aris += ari
         cell_type_asws += celltype_asw
-    consistency.append(count/total_adata)
-    ariss.append(aris/4)
-    NMIs.append(NMI/4)
 
-    
-    print('ARIs: ', ariss)
-    print('NMI: ', NMIs)
-    print('silhouette score: ', silhouettes/4)
-    print('isolated_asw: ', isolated_asws/4)
-    print('celltype_asw: ', cell_type_asws/4)
-    print('isolated_f1: ', isolated_labels_f1s/4)
-    return ariss, NMIs, silhouettes/4, isolated_asws/4, cell_type_asws/4, isolated_labels_f1s/4
+
+    print('ARIs: ', aris/total_stage)
+    print('NMI: ', NMI/total_stage)
+    print('silhouette score: ', silhouettes/total_stage)
+    print('isolated_asw: ', isolated_asws/total_stage)
+    print('celltype_asw: ', cell_type_asws/total_stage)
+    print('isolated_f1: ', isolated_labels_f1s/total_stage)
+    return aris/total_stage, NMI/total_stage, silhouettes/total_stage, isolated_asws/total_stage, cell_type_asws/total_stage, isolated_labels_f1s/total_stage

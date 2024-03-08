@@ -109,12 +109,15 @@ def plot_stages_latent_representation(adatas, cell_type_key, stage_key,color_sch
         sc.pl.umap(adata,color='leiden',ax=ax[i,1], show=False,title = str(stage_keys[i]))
         total_adata+=len(adata)
         count+=temp_count
-        print('ARI: ', adjusted_rand_score(adata.obs['name.simple'],adata.obs['UNAGI'] ))
-        print('NMIs: ', normalized_mutual_info_score(adata.obs['name.simple'],adata.obs['UNAGI']))
-        print('silhouette score: ', silhouette_score(adata.obsm['z'], adata.obs['leiden']))
-        NMI += normalized_mutual_info_score(adata.obs['name.simple'], adata.obs['UNAGI'])
-        silhouettes+=silhouette_score(adata.obsm['z'], adata.obs['leiden'])
-        aris += adjusted_rand_score( adata.obs['name.simple'],adata.obs['UNAGI'])
+        temp_ari = adjusted_rand_score(adata.obs['name.simple'],adata.obs['UNAGI'] )
+        temp_nmi = normalized_mutual_info_score(adata.obs['name.simple'],adata.obs['UNAGI'])
+        temp_silhouette_score = silhouette_score(adata.obsm['z'], adata.obs['leiden'])
+        print('ARI: ', temp_ari)
+        print('NMIs: ', temp_nmi)
+        print('silhouette score: ', temp_silhouette_score)
+        NMI += temp_nmi
+        silhouettes += temp_silhouette_score
+        aris += temp_ari
     consistency.append(count/total_adata)
     ariss.append(aris/4)
     NMIs.append(NMI/4)
