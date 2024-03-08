@@ -168,12 +168,13 @@ class UNAGI:
             self.model = VAE(self.input_dim, self.hidden_dim,self.graph_dim, self.latent_dim,beta=1,distribution=self.dist)
         else:
             self.model = Plain_VAE(self.input_dim, self.hidden_dim,self.graph_dim, self.latent_dim,beta=1,distribution=self.dist)
+        self.GCN = GCN
         self.adversarial = adversarial
         if self.adversarial:
             self.dis_model = Discriminator(self.input_dim)
         else:
             self.dis_model = None
-        self.unagi_trainer = UNAGI_trainer(self.model,self.dis_model,self.task,self.BATCHSIZE,self.epoch_initial,self.epoch_iter,self.device,self.lr, self.lr_dis,cuda=self.GPU)
+        self.unagi_trainer = UNAGI_trainer(self.model,self.dis_model,self.task,self.BATCHSIZE,self.epoch_initial,self.epoch_iter,self.device,self.lr, self.lr_dis,GCN=self.GCN,cuda=self.GPU)
     def register_CPO_parameters(self,anchor_neighbors=10, max_neighbors=30, min_neighbors=5, resolution_min=0.8, resolution_max=1.2):
         '''
         The function to register the parameters for the CPO analysis. The parameters will be used to perform the CPO analysis.
@@ -234,7 +235,7 @@ class UNAGI:
         self.iDREM_parameters['Convergence_Likelihood'] = Convergence_Likelihood
         self.iDREM_parameters['Minimum_Standard_Deviation'] = Minimum_Standard_Deviation
 
-    def run_UNAGI(self,idrem_dir):
+    def run_UNAGI(self,idrem_dir,CPO=True):
         '''
         The function to launch the model training. The model will be trained iteratively. The number of iterations is specified by the `max_iter` parameter in the `setup_training` function.
         
@@ -253,7 +254,7 @@ class UNAGI:
                 dir3 = os.path.join(self.data_folder , 'model_save')
                 initalcommand = 'mkdir '+ dir1 +' && mkdir '+dir2
                 p = subprocess.Popen(initalcommand, stdout=subprocess.PIPE, shell=True)
-            unagi_runner = UNAGI_runner(self.data_folder,self.ns,iteration,self.unagi_trainer,idrem_dir,adversarial=self.adversarial)
+            unagi_runner = UNAGI_runner(self.data_folder,self.ns,iteration,self.unagi_trainer,idrem_dir,adversarial=self.adversarial,GCN = self.GCN)
             unagi_runner.set_up_species(self.species)
             if self.CPO_parameters is not None:
                 if type (self.CPO_parameters) != dict:
@@ -265,7 +266,7 @@ class UNAGI:
                     raise ValueError('iDREM_parameters should be a dictionary')
                 else:
                     unagi_runner.set_up_iDREM(Minimum_Absolute_Log_Ratio_Expression = self.iDREM_parameters['Minimum_Absolute_Log_Ratio_Expression'], Convergence_Likelihood = self.iDREM_parameters['Convergence_Likelihood'], Minimum_Standard_Deviation = self.iDREM_parameters['Minimum_Standard_Deviation'])
-            unagi_runner.run()
+            unagi_runner.run(CPO)
 
     def test_geneweihts(self,iteration,idrem_dir):
         iteration = int(iteration)

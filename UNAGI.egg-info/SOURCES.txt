@@ -45,6 +45,7 @@ UNAGI/utils/CPO_utils.py
 UNAGI/utils/__init__.py
 UNAGI/utils/analysis_helper.py
 UNAGI/utils/attribute_utils.py
+UNAGI/utils/evaluate.py
 UNAGI/utils/gcn_utils.py
 UNAGI/utils/h5adReader.py
 UNAGI/utils/trainer_utils.py

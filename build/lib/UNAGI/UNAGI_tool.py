@@ -10,7 +10,7 @@ import gc
 from .utils.gcn_utils import get_gcn_exp
 from .train.runner import UNAGI_runner
 import torch
-from .model.models import VAE,Discriminator
+from .model.models import VAE,Discriminator,Plain_VAE
 from .UNAGI_analyst import analyst
 from .train.trainer import UNAGI_trainer
 class UNAGI:
@@ -41,8 +41,8 @@ class UNAGI:
         threads: int
             the number of threads for the cell graph construction, default is 20.
         '''
-        if total_stage <= 2:
-            raise ValueError('The total number of stages should be larger than 2')
+        if total_stage < 2:
+            raise ValueError('The total number of stages should be larger than 1')
         
         if os.path.isfile(data_path):
             self.data_folder = os.path.dirname(data_path)
@@ -105,7 +105,9 @@ class UNAGI:
                  graph_dim=1024,
                  BATCHSIZE=512,
                  max_iter=10,
-                 GPU=False):
+                 GPU=False,
+                 adversarial=True,
+                 GCN=True):
         '''
         Set up the training parameters and the model parameters.
         
@@ -162,9 +164,17 @@ class UNAGI:
         #if self.input is not existed then raised error
         if self.input_dim is None:
             raise ValueError('Please use setup_data function to prepare the data first')
-        self.model = VAE(self.input_dim, self.hidden_dim,self.graph_dim, self.latent_dim,beta=1,distribution=self.dist)
-        self.dis_model = Discriminator(self.input_dim)
-        self.unagi_trainer = UNAGI_trainer(self.model,self.dis_model,self.task,self.BATCHSIZE,self.epoch_initial,self.epoch_iter,self.device,self.lr, self.lr_dis,cuda=self.GPU)
+        if GCN:
+            self.model = VAE(self.input_dim, self.hidden_dim,self.graph_dim, self.latent_dim,beta=1,distribution=self.dist)
+        else:
+            self.model = Plain_VAE(self.input_dim, self.hidden_dim,self.graph_dim, self.latent_dim,beta=1,distribution=self.dist)
+        self.GCN = GCN
+        self.adversarial = adversarial
+        if self.adversarial:
+            self.dis_model = Discriminator(self.input_dim)
+        else:
+            self.dis_model = None
+        self.unagi_trainer = UNAGI_trainer(self.model,self.dis_model,self.task,self.BATCHSIZE,self.epoch_initial,self.epoch_iter,self.device,self.lr, self.lr_dis,GCN=self.GCN,cuda=self.GPU)
     def register_CPO_parameters(self,anchor_neighbors=10, max_neighbors=30, min_neighbors=5, resolution_min=0.8, resolution_max=1.2):
         '''
         The function to register the parameters for the CPO analysis. The parameters will be used to perform the CPO analysis.
@@ -225,7 +235,7 @@ class UNAGI:
         self.iDREM_parameters['Convergence_Likelihood'] = Convergence_Likelihood
         self.iDREM_parameters['Minimum_Standard_Deviation'] = Minimum_Standard_Deviation
 
-    def run_UNAGI(self,idrem_dir,transcription_factor_file):
+    def run_UNAGI(self,idrem_dir,CPO=True):
         '''
         The function to launch the model training. The model will be trained iteratively. The number of iterations is specified by the `max_iter` parameter in the `setup_training` function.
         
@@ -244,7 +254,7 @@ class UNAGI:
                 dir3 = os.path.join(self.data_folder , 'model_save')
                 initalcommand = 'mkdir '+ dir1 +' && mkdir '+dir2
                 p = subprocess.Popen(initalcommand, stdout=subprocess.PIPE, shell=True)
-            unagi_runner = UNAGI_runner(self.data_folder,self.ns,iteration,self.unagi_trainer,idrem_dir)
+            unagi_runner = UNAGI_runner(self.data_folder,self.ns,iteration,self.unagi_trainer,idrem_dir,adversarial=self.adversarial,GCN = self.GCN)
             unagi_runner.set_up_species(self.species)
             if self.CPO_parameters is not None:
                 if type (self.CPO_parameters) != dict:
@@ -256,9 +266,15 @@ class UNAGI:
                     raise ValueError('iDREM_parameters should be a dictionary')
                 else:
                     unagi_runner.set_up_iDREM(Minimum_Absolute_Log_Ratio_Expression = self.iDREM_parameters['Minimum_Absolute_Log_Ratio_Expression'], Convergence_Likelihood = self.iDREM_parameters['Convergence_Likelihood'], Minimum_Standard_Deviation = self.iDREM_parameters['Minimum_Standard_Deviation'])
-            unagi_runner.run()
+            unagi_runner.run(CPO)
 
-  
+    def test_geneweihts(self,iteration,idrem_dir):
+        iteration = int(iteration)
+        unagi_runner = UNAGI_runner(self.data_folder,self.ns,iteration,self.unagi_trainer,idrem_dir)
+        unagi_runner.set_up_species(self.species)
+        unagi_runner.load_stage_data()
+        unagi_runner.update_gene_weights_table()
+
     def analyse_UNAGI(self,data_path,iteration,progressionmarker_background_sampling_times,target_dir=None,customized_drug=None,cmap_dir=None):
         '''
         Perform downstream tasks including dynamic markers discoveries, hierarchical markers discoveries, pathway perturbations and compound perturbations.

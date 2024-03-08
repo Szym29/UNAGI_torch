@@ -8,7 +8,7 @@ import pyro
 import numpy as np
 from ..utils.trainer_utils import transfer_to_ranking_score
 import scipy.sparse as sp
-from ..utils.h5adReader import H5ADataSet
+from ..utils.h5adReader import H5ADDataSet,H5ADPlainDataSet
 #import variable
 from ..train.customized_elbo import *
 import torch.nn as nn
@@ -18,7 +18,7 @@ from torch import optim
 from torch.autograd import Variable
 
 class UNAGI_trainer():
-    def __init__(self,model, dis_model,modelName,batch_size,epoch_initial,epoch_iter,device,lr, lr_dis,cuda=True):
+    def __init__(self,model, dis_model,modelName,batch_size,epoch_initial,epoch_iter,device,lr, lr_dis,GCN=True,cuda=True):
         super(UNAGI_trainer, self).__init__()
         self.model = model
         self.modelName = modelName
@@ -29,6 +29,7 @@ class UNAGI_trainer():
         self.device = device
         self.lr = lr
         self.dis_model = dis_model
+        self.GCN = GCN
         self.lr_dis = lr_dis
     def train_model(self,adata, vae,dis, train_loader,adj, adversarial=True,geneWeights=None, use_cuda=True):
         # initialize loss accumulator
@@ -48,8 +49,11 @@ class UNAGI_trainer():
         vae_loss = 0
         dis_loss = 0
         adversarial_loss = 0
+        
         for i, [x,neighbourhoods,idx] in enumerate(train_loader): 
-            if neighbourhoods is not None:
+            size = len(x)
+            if self.GCN:
+                
                 temp_x = placeholder.clone()
                 start = i*self.batch_size
                 if (1+i)*self.batch_size > len(adj):
@@ -59,7 +63,8 @@ class UNAGI_trainer():
                 neighbourhood = [item for sublist in neighbourhoods for item in sublist]
                 temp_x[neighbourhood] = torch.Tensor(adata.X)[neighbourhood]
                 x = temp_x
-
+            else:
+                neighbourhood = None
         # if on GPU put mini-batch into CUDA memory
             if self.cuda:
                 x = x.to(self.device)
@@ -70,7 +75,7 @@ class UNAGI_trainer():
                     mu, dropout_logits, mu_, logvar_,_ = vae(x,adj,idx)
                     loss =  vae.loss_function(x[idx,:], mu, dropout_logits, mu_, logvar_,gene_weights=geneWeights1)
                 else:
-                    mu, dropout_logits, mu_, logvar_ = vae(x)
+                    mu, dropout_logits, mu_, logvar_,_ = vae(x)
                     loss =  vae.loss_function(x, mu, dropout_logits, mu_, logvar_,gene_weights=geneWeights1)
                 optimizer_vae.zero_grad()
                 loss.backward()
@@ -78,17 +83,13 @@ class UNAGI_trainer():
                 vae_loss += loss.item()
 
                 # continue
-
-
-                
-        
             else:
                 #train the generator
                 if neighbourhood is not None:
                     mu, dropout_logits, mu_, logvar_,_ = vae(x,adj,idx)
                     loss =  vae.loss_function(x[idx,:], mu, dropout_logits, mu_, logvar_)
                 else:
-                    mu, dropout_logits, mu_, logvar_ = vae(x)
+                    mu, dropout_logits, mu_, logvar_,recons = vae(x) 
                     loss =  vae.loss_function(x, mu, dropout_logits, mu_, logvar_)
                 optimizer_vae.zero_grad()
                 loss.backward()
@@ -101,9 +102,9 @@ class UNAGI_trainer():
                     _,_,_,_,recons = vae(x,adj,idx)
                 else:
                     _,_,_,_,recons = vae(x)
-                zeros_label1=Variable(torch.zeros(end-start,1)).to(self.device)
-                ones_label = torch.ones((end-start,1)).to(self.device)
-                zeros_label = torch.zeros((end-start,1)).to(self.device)
+                zeros_label1=Variable(torch.zeros(size,1)).to(self.device)
+                ones_label = torch.ones((size,1)).to(self.device)
+                zeros_label = torch.zeros((size,1)).to(self.device)
                 if neighbourhood is not None:
                     output_real = dis(x[idx,:])
                 else:
@@ -150,7 +151,7 @@ class UNAGI_trainer():
         if 'gcn_connectivities' in adata.obsp.keys():
             adj = adata.obsp['gcn_connectivities']
             adj = adj.asformat('coo')
-        cell = H5ADataSet(adata)
+        cell = H5ADDataSet(adata)
         num_genes=cell.num_genes()
         placeholder = torch.zeros(adata.X.shape,dtype=torch.float32)
         cell_loader=DataLoader(cell,batch_size=self.batch_size,num_workers=0)
@@ -163,19 +164,24 @@ class UNAGI_trainer():
         if sp.isspmatrix(adata.X):
             adata.X = adata.X.toarray()
         for i, [x,neighbourhoods,idx] in enumerate(cell_loader):
-            temp_x = placeholder.clone()
-            start = i*self.batch_size
-            if (1+i)*self.batch_size > len(adj):
-                end =  len(adj)
+            if self.GCN:
+                temp_x = placeholder.clone()
+                start = i*self.batch_size
+                if (1+i)*self.batch_size > len(adj):
+                    end =  len(adj)
+                else:
+                    end = (1+i)*self.batch_size
+                neighbourhood = [item for sublist in neighbourhoods for item in sublist]
+                temp_x[neighbourhood] = torch.Tensor(adata.X)[neighbourhood]
+                x = temp_x
+                if self.cuda:
+                    x = x.to(self.device)
+                # _,mu, logvar,_,_  = self.model.getZ(x.view(-1, num_genes),adj,i,start, end,test=False)
+                mu, logvar = self.model.encoder(x.view(-1, num_genes),adj,idx)
             else:
-                end = (1+i)*self.batch_size
-            neighbourhood = [item for sublist in neighbourhoods for item in sublist]
-            temp_x[neighbourhood] = torch.Tensor(adata.X)[neighbourhood]
-            x = temp_x
-            if self.cuda:
-                x = x.to(self.device)
-            # _,mu, logvar,_,_  = self.model.getZ(x.view(-1, num_genes),adj,i,start, end,test=False)
-            mu, logvar = self.model.encoder(x.view(-1, num_genes),adj,idx)
+                if self.cuda:
+                    x = x.to(self.device)
+                mu, logvar = self.model.encoder(x.view(-1, num_genes))
             z = mu+logvar
             z_locs+=mu.detach().cpu().numpy().tolist()
             z_scales+=logvar.detach().cpu().numpy().tolist()
@@ -200,10 +206,12 @@ class UNAGI_trainer():
             adj = None
         if is_iterative:
             geneWeights = adata.layers['geneWeight']
-            cell = H5ADataSet(adata)
         else:
             geneWeights = None
-            cell = H5ADataSet(adata)
+        if self.GCN:
+            cell = H5ADDataSet(adata)
+        else:
+            cell = H5ADPlainDataSet(adata)
             
         cell_loader = DataLoader(cell, batch_size=self.batch_size, num_workers=0, shuffle=True)
         

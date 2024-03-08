@@ -114,7 +114,7 @@ class VAE_decoder(nn.Module):
             return  torch.exp(mu), dropout_logits
 class Plain_VAE(nn.Module):
     def __init__(self, input_dim, hidden_dim, graph_dim, latent_dim,beta=1,distribution='zinb'):
-        super(VAE, self).__init__()
+        super(Plain_VAE, self).__init__()
         self.input_dim = input_dim
         self.beta = beta
         self.hidden_dim = hidden_dim

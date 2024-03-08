@@ -398,12 +398,8 @@ class perturbation:
                 temp = self.getDistance(selectedtemp,hiddenReps[count])
                 count+=1
             fijresults.append(temp)
-        print('~~~~~')
-        print(np.array(dijresults))
-        print(np.array(fijresults).shape, np.array(dijresults).shape)
+
         delta = np.array(fijresults) - np.array(dijresults)[:,np.newaxis]
-        
-        print(delta.shape)
         gc.collect()
         
         out = []

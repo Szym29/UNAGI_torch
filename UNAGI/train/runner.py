@@ -23,7 +23,7 @@ class UNAGI_runner:
     trainer: the trainer class to train the UNAGI model
     idrem_dir: the directory of the idrem software
     '''
-    def __init__(self,data_path,total_stage,iteration,trainer,idrem_dir,adversarial=True):
+    def __init__(self,data_path,total_stage,iteration,trainer,idrem_dir,adversarial=True,GCN=True):
         self.data_path = data_path
         self.total_stage = total_stage
         self.iteration = iteration
@@ -35,6 +35,7 @@ class UNAGI_runner:
         self.species = None
         self.setup_IDREM = False
         self.adversarial = adversarial
+        self.GCN = GCN
     def load_stage_data(self):
         '''
         Load the stage data from the data_path. The stage data will be stored in the adata_stages list. The all_in_one adata will be used for the UNAGI model training.
@@ -51,7 +52,7 @@ class UNAGI_runner:
         self.all_in_one = get_all_adj_adata(stageadata)
         self.adata_stages = stageadata
         self.genenames = np.array(list(self.adata_stages[0].var.index.values))
-    def annotate_stage_data(self, adata,stage):
+    def annotate_stage_data(self, adata,stage,CPO):
         '''
         Retreive the latent representations of given single cell data. Performing clusterings, generating the UMAPs, annotating the cell types and adding the top genes and cell types attributes.
 
@@ -82,6 +83,8 @@ class UNAGI_runner:
         z_adj = kneighbors_graph(adata.obsm['z'], self.neighbor_parameters[stage], mode='connectivity', include_self=True,n_jobs=20)
         adata.obsp['connectivities'] = z_adj
         adata.obsp['distances'] = kneighbors_graph(adata.obsm['z'], self.neighbor_parameters[stage], mode='distance', include_self=True,n_jobs=20)
+        if CPO is False:
+            sc.pp.neighbors(adata, use_rep="z",n_neighbors=self.neighbor_parameters[stage],method='umap')
         sc.tl.leiden(adata,resolution = self.resolutions[stage])
         sc.tl.paga(adata)
         sc.pl.paga(adata,show=False)
@@ -138,7 +141,7 @@ class UNAGI_runner:
                 max_adata_cells = len(each)
         self.resolution_coefficient = max_adata_cells
         for i in range(0,len(self.adata_stages)):
-            self.adata_stages[i] = self.annotate_stage_data(self.adata_stages[i], i)
+            self.adata_stages[i] = self.annotate_stage_data(self.adata_stages[i], i,CPO=True)
         if not self.setup_CPO:
             print('CPO parameters are not set up, using default parameters')
             print('anchor_neighbors: 15, max_neighbors: 35, min_neighbors: 10, resolution_min: 0.8, resolution_max: 1.5')
@@ -148,7 +151,7 @@ class UNAGI_runner:
             self.neighbor_parameters, anchor_index = get_neighbors(self.adata_stages, num_cells,anchor_neighbors=self.anchor_neighbors,max_neighbors=self.max_neighbors,min_neighbors=self.min_neighbors)
             self.resolutions,_ = auto_resolution(self.adata_stages, anchor_index, self.neighbor_parameters, self.resolution_min, self.resolution_max)
     
-    def update_cell_attributes(self):
+    def update_cell_attributes(self,CPO):
         '''
         Update and save the cell attributes including the top genes, cell types and latent representations.
         '''
@@ -160,7 +163,7 @@ class UNAGI_runner:
             adata.uns['topGene']={}
             adata.uns['clusterType']={}
             adata.uns['rep']={}
-            adata,averageValue,rep = self.annotate_stage_data(adata,i)
+            adata,averageValue,rep = self.annotate_stage_data(adata,i,CPO)
             gc.collect()
             reps.append(rep)
             averageValue = np.array(averageValue)
@@ -253,7 +256,7 @@ class UNAGI_runner:
         '''
         mergeAdata(os.path.join(self.data_path,str(self.iteration)),total_stages=self.total_stage)
        
-    def run(self):
+    def run(self,CPO):
         '''
         Run the UNAGI pipeline.
         '''
@@ -263,8 +266,13 @@ class UNAGI_runner:
         else:
             is_iterative = True
         self.trainer.train(self.all_in_one,self.iteration,target_dir=self.data_path,adversarial=self.adversarial,is_iterative=is_iterative)
-        self.run_CPO()
-        self.update_cell_attributes()
+        if CPO:
+            self.run_CPO()
+            
+        else:
+            self.resolutions = [1.0]*self.total_stage
+            self.neighbor_parameters = [30]*self.total_stage
+        self.update_cell_attributes(CPO)
         self.build_temporal_dynamics_graph()
         self.run_IDREM()
         self.update_gene_weights_table()
