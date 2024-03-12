@@ -175,7 +175,7 @@ class UNAGI:
         else:
             self.dis_model = None
         self.unagi_trainer = UNAGI_trainer(self.model,self.dis_model,self.task,self.BATCHSIZE,self.epoch_initial,self.epoch_iter,self.device,self.lr, self.lr_dis,GCN=self.GCN,cuda=self.GPU)
-    def register_CPO_parameters(self,anchor_neighbors=10, max_neighbors=30, min_neighbors=5, resolution_min=0.8, resolution_max=1.2):
+    def register_CPO_parameters(self,anchor_neighbors=15, max_neighbors=35, min_neighbors=10, resolution_min=0.8, resolution_max=1.5):
         '''
         The function to register the parameters for the CPO analysis. The parameters will be used to perform the CPO analysis.
         
