@@ -165,9 +165,9 @@ class UNAGI:
         if self.input_dim is None:
             raise ValueError('Please use setup_data function to prepare the data first')
         if GCN:
-            self.model = VAE(self.input_dim, self.hidden_dim,self.graph_dim, self.latent_dim,beta=1,distribution=self.dist)
+            self.model = VAE(self.input_dim, self.hidden_dim,self.graph_dim, self.latent_dim,beta=self.beta,distribution=self.dist)
         else:
-            self.model = Plain_VAE(self.input_dim, self.hidden_dim,self.graph_dim, self.latent_dim,beta=1,distribution=self.dist)
+            self.model = Plain_VAE(self.input_dim, self.hidden_dim,self.graph_dim, self.latent_dim,beta=self.beta,distribution=self.dist)
         self.GCN = GCN
         self.adversarial = adversarial
         if self.adversarial:
