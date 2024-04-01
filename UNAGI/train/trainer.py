@@ -132,7 +132,7 @@ class UNAGI_trainer():
 
             
 
-        normalizer_train = len(train_loader.dataset)
+        normalizer_train = len(train_loader)
         total_epoch_vae_loss = vae_loss / normalizer_train
         print('vae_loss', total_epoch_vae_loss)
         if adversarial:
@@ -191,7 +191,53 @@ class UNAGI_trainer():
         z_scales = np.exp(0.5 * z_scales)
         TZ = np.array(TZ)
         return z_locs, z_scales, TZ
+    
+    def get_reconstruction(self,adata,iteration,target_dir):
+        '''
+        retrieve the reconstructed data
+        '''
+        if 'X_pca' not in adata.obsm.keys():
+            sc.pp.pca(adata)
+    
+        if 'gcn_connectivities' in adata.obsp.keys():
+            adj = adata.obsp['gcn_connectivities']
+            adj = adj.asformat('coo')
+        cell = H5ADDataSet(adata)
+        num_genes=cell.num_genes()
+        placeholder = torch.zeros(adata.X.shape,dtype=torch.float32)
+        cell_loader=DataLoader(cell,batch_size=self.batch_size,num_workers=0)
+        self.model.load_state_dict(torch.load(os.path.join(target_dir,'model_save/'+self.modelName+'_'+str(iteration)+'.pth'),map_location=self.device))
+        self.model = self.model.to(self.device)
+        recons = []
+        adj = setup_graph(adj)
+        adj = adj.to(self.device)
+        if sp.isspmatrix(adata.X):
+            adata.X = adata.X.toarray()
+        for i, [x,neighbourhoods,idx] in enumerate(cell_loader):
+            if self.GCN:
+                temp_x = placeholder.clone()
+                start = i*self.batch_size
+                if (1+i)*self.batch_size > len(adj):
+                    end =  len(adj)
+                else:
+                    end = (1+i)*self.batch_size
+                neighbourhood = [item for sublist in neighbourhoods for item in sublist]
+                temp_x[neighbourhood] = torch.Tensor(adata.X)[neighbourhood]
+                x = temp_x
+                if self.cuda:
+                    x = x.to(self.device)
+                # _,mu, logvar,_,_  = self.model.getZ(x.view(-1, num_genes),adj,i,start, end,test=False)
+                _, _, _, _, recon = self.model(x.view(-1, num_genes),adj,idx)
+            else:
+                if self.cuda:
+                    x = x.to(self.device)
+                _, _, _, _, recon = self.model(x.view(-1, num_genes))
+            
+            recons+=recon.detach().cpu().numpy().tolist()
+           
+        recons = np.array(recons)
 
+        return recons
     def train(self, adata, iteration, target_dir, adversarial=True,is_iterative=False):
         
         assert 'X_pca' in adata.obsm.keys(), 'PCA is not performed'
