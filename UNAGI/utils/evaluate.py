@@ -82,6 +82,7 @@ def run_metrics(adatas, cell_type_key, stage_key):
         print('ARI: ', ari)
         print('NMIs: ', nmi)
         print('DBI:',dbi)
+        print('label_score: ', label_score)
         print('silhouette score: ', silhouette)
         print('isolated_asw: ', isolated_asw)
         print('isolated_f1: ', isolated_f1)
@@ -95,10 +96,11 @@ def run_metrics(adatas, cell_type_key, stage_key):
         aris += ari
         cell_type_asws += celltype_asw
 
-        
+
     print('ARIs: ', aris/total_stage)
     print('NMI: ', NMI/total_stage)
     print('DBIs:', DBI/total_stage)
+    print('label_scores: ', label_scores/total_stage)
     print('silhouette score: ', silhouettes/total_stage)
     print('isolated_asw: ', isolated_asws/total_stage)
     print('celltype_asw: ', cell_type_asws/total_stage)
