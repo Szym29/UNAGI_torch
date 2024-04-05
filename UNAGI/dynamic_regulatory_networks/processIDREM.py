@@ -23,7 +23,8 @@ def getClusterPaths(edges, total_stages):
         raise ValueError("Number of edges must be one less than total stages")
 
     paths = {}
-
+    for key in list(edges.keys()):
+        edges[int(key)] = edges[key]
     # Initialize paths with the first set of edges
     for each in edges[0]:
         if str(each[0]) not in paths:
