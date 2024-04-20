@@ -149,7 +149,7 @@ def getandUpadateEdges(total_stage,midpath,iteration):
     edges = []
     for i in range(total_stage-1):
         edges.append(buildEdges(i,i+1,midpath,iteration))
-    updateEdges(edges,midpath,iteration)
+    edges = updateEdges(edges,midpath,iteration)
     return edges
 
 def updateEdges(edges,midpath,iteration):
@@ -178,7 +178,7 @@ def updateEdges(edges,midpath,iteration):
     f = open(os.path.join(midpath,str(iteration)+'/edges.txt'),'w')
     f.write(str(newEdges))
     f.close()
-
+    return newEdges
 def reupdateAttributes(adata, stage, results):
     '''
     update gaussian and gamma rep, top 100 differential genes, cell types of clusters to anndata

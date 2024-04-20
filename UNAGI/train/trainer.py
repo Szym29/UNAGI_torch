@@ -151,7 +151,10 @@ class UNAGI_trainer():
         if 'gcn_connectivities' in adata.obsp.keys():
             adj = adata.obsp['gcn_connectivities']
             adj = adj.asformat('coo')
-        cell = H5ADDataSet(adata)
+        if self.GCN:
+            cell = H5ADDataSet(adata)
+        else:
+            cell = H5ADPlainDataSet(adata)
         num_genes=cell.num_genes()
         placeholder = torch.zeros(adata.X.shape,dtype=torch.float32)
         cell_loader=DataLoader(cell,batch_size=self.batch_size,num_workers=0)
