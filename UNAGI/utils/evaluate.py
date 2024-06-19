@@ -19,7 +19,7 @@ def get_label_score(adata,embedding,type_label):
     neighbors = kneighbors_graph(embedding, 50, mode='distance', include_self=True,n_jobs=25)
     label_score = neighbor_score(adata, neighbors,type_label)
     return label_score/50
-def run_metrics_subsample(adatas, cell_type_key, stage_key,portion):
+def run_metrics_subsample(adatas, cell_type_key, stage_key,portion,random_state=0):
     '''
     Evaluation metrics.
 
@@ -67,7 +67,7 @@ def run_metrics_subsample(adatas, cell_type_key, stage_key,portion):
         print(len(adatas.obs[adatas.obs[stage_key] == stage].index.tolist()))
 
         adata = adatas[adatas.obs[adatas.obs[stage_key] == stage].index.tolist()]
-        sc.pp.subsample(adata, fraction=portion, copy=False)
+        sc.pp.subsample(adata, fraction=portion, copy=False,random_state=random_state)
         adata.obs['UNAGI'] = adata.obs[cell_type_key].astype('category')
         adata.obs['leiden'] = adata.obs['leiden'].astype('category')
         adata.obs['leiden'] = adata.obs['leiden'].astype('string')

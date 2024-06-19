@@ -23,7 +23,7 @@ class UNAGI_runner:
     trainer: the trainer class to train the UNAGI model
     idrem_dir: the directory of the idrem software
     '''
-    def __init__(self,data_path,total_stage,iteration,trainer,idrem_dir,adversarial=True,GCN=True):
+    def __init__(self,data_path,total_stage,iteration,trainer,idrem_dir,adversarial=True,GCN=True,connect_edges_cutoff=0.05):
         self.data_path = data_path
         self.total_stage = total_stage
         self.iteration = iteration
@@ -36,6 +36,7 @@ class UNAGI_runner:
         self.setup_IDREM = False
         self.adversarial = adversarial
         self.GCN = GCN
+        self.connect_edges_cutoff = connect_edges_cutoff
     def load_stage_data(self):
         '''
         Load the stage data from the data_path. The stage data will be stored in the adata_stages list. The all_in_one adata will be used for the UNAGI model training.
@@ -175,7 +176,7 @@ class UNAGI_runner:
         '''
         Build the temporal dynamics graph.
         '''
-        self.edges = getandUpadateEdges(self.total_stage,self.data_path,self.iteration)
+        self.edges = getandUpadateEdges(self.total_stage,self.data_path,self.iteration,self.connect_edges_cutoff)
     def set_up_IDREM(self,Minimum_Absolute_Log_Ratio_Expression, Convergence_Likelihood, Minimum_Standard_Deviation):
         '''
         Set up the parameters for running the iDREM software.

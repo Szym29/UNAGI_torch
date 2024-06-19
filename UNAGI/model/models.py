@@ -1,7 +1,7 @@
 import torch
 from torch.nn import functional as F
 from torch import nn
-from .distributions import ZeroInflatedGamma, ZeroInflatedLogNormal
+from .distributions import ZeroInflatedGamma, ZeroInflatedLogNormal, ZeroInflatedExponential
 from pyro.distributions.zero_inflated import ZeroInflatedNegativeBinomial
 
 class GCNLayer(nn.Module):
@@ -112,6 +112,10 @@ class VAE_decoder(nn.Module):
             mu = self.fc4(h3)
             dropout_logits = self.fc5(h3)
             return  torch.exp(mu), dropout_logits
+        elif self.distribution == 'zie':
+            mu = self.fc4(h3)
+            dropout_logits = self.fc5(h3)
+            return  F.softplus(mu), dropout_logits
 class Plain_VAE(nn.Module):
     def __init__(self, input_dim, hidden_dim, graph_dim, latent_dim,beta=1,distribution='zinb'):
         super(Plain_VAE, self).__init__()
@@ -145,7 +149,7 @@ class Plain_VAE(nn.Module):
 
     def get_latent_representation(self, x,idx=None):
         mu, logvar = self.encoder(x.view(-1, self.input_dim),idx)
-        return mu+logvar
+        return mu+torch.exp(0.5 * logvar)
     # def getnerate
     def generate_inside(self, mean, dropout_logits):
         # scale = F.softplus(self.log_theta)#self.log_theta.exp()
@@ -162,6 +166,9 @@ class Plain_VAE(nn.Module):
             theta = F.softplus(self.log_theta)
             nb_logits = (mean+1e-5).log()-(theta+1e-5).log()
             distribution = ZeroInflatedNegativeBinomial(total_count=theta, logits=nb_logits,gate_logits = dropout_logits, validate_args=False)
+        elif self.distribution == 'zie':
+            loc = 1/(mean+1e-5)
+            distribution = ZeroInflatedExponential(rate=loc, gate_logits=dropout_logits, validate_args=False)
         return distribution.mean
     def decode(self, z):
         mu, dropout_logits = self.decoder(z)
@@ -179,6 +186,9 @@ class Plain_VAE(nn.Module):
             theta = F.softplus(self.log_theta)
             nb_logits = (mu+1e-5).log()-(theta+1e-5).log()
             distribution = ZeroInflatedNegativeBinomial(total_count=theta, logits=nb_logits,gate_logits = dropout_logits, validate_args=False)
+        elif self.distribution == 'zie':
+            loc = 1/(mu+1e-5)
+            distribution = ZeroInflatedExponential(rate=loc, gate_logits=dropout_logits, validate_args=False)
         return distribution.mean #return the mean of zinb distribution
     def generate(self, x,sample_shape=None,random=False):
         '''
@@ -189,7 +199,7 @@ class Plain_VAE(nn.Module):
         if random:
             z = self.reparameterize(mu, logvar)
         else:
-            z = mu+logvar #not using reparameterize
+            z = mu+torch.exp(0.5 * logvar) #not using reparameterize
         mu, dropout_logits = self.decoder(z)
         # scale = F.softplus(self.log_theta)#self.log_theta.exp()
         # loc = (mu+1e-5).log()-scale.pow(2)/2
@@ -205,6 +215,9 @@ class Plain_VAE(nn.Module):
             theta = F.softplus(self.log_theta)
             nb_logits = (mu+1e-5).log()-(theta+1e-5).log()
             distribution = ZeroInflatedNegativeBinomial(total_count=theta, logits=nb_logits,gate_logits = dropout_logits, validate_args=False)
+        elif self.distribution == 'zie':
+            loc = 1/(mu+1e-5)
+            distribution = ZeroInflatedExponential(rate=loc, gate_logits=dropout_logits, validate_args=False)
         # theta = F.softplus(self.log_theta)#self.log_theta.exp()
 
         # nb_logits = (mu+1e-5).log() - (theta+1e-5).log()
@@ -215,7 +228,7 @@ class Plain_VAE(nn.Module):
         else:
             return distribution.mean #return the mean of zinb distribution
     def kl_d(self, mu, logvar):
-        return (-0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp()))/len(mu)
+        return (-0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp(),dim=-1))#/len(mu)
     def reconstruction_loss(self, x, mu, dropout_logits,gene_weights=None):
         '''
         x: input data
@@ -236,6 +249,9 @@ class Plain_VAE(nn.Module):
             theta = F.softplus(self.log_theta)
             nb_logits = (mu+1e-5).log()-(theta+1e-5).log()
             distribution = ZeroInflatedNegativeBinomial(total_count=theta, logits=nb_logits,gate_logits = dropout_logits, validate_args=False)
+        elif self.distribution == 'zie':
+            loc = 1/(mu+1e-5)
+            distribution = ZeroInflatedExponential(rate=loc, gate_logits=dropout_logits, validate_args=False)
         if gene_weights is not None:
             return (distribution.log_prob(x)*gene_weights).sum(-1)
         return distribution.log_prob(x).sum(-1)
@@ -243,7 +259,7 @@ class Plain_VAE(nn.Module):
         reconstruction_loss = self.reconstruction_loss(x, mu, dropout_logits,gene_weights=gene_weights)
         kl_div = self.kl_d(mu_, logvar_)
         # print(-torch.mean(reconstruction_loss), torch.mean(kl_div))
-        return -torch.mean(reconstruction_loss - self.beta * kl_div)
+        return -(torch.mean(reconstruction_loss,dim=0) - torch.mean(self.beta * kl_div,dim=0))
     
 class VAE(Plain_VAE):
     def __init__(self, input_dim, hidden_dim, graph_dim, latent_dim,beta=1,distribution='zinb'):
@@ -278,7 +294,7 @@ class VAE(Plain_VAE):
 
     def get_latent_representation(self, x,adj,idx=None):
         mu, logvar = self.encoder(x.view(-1, self.input_dim),adj,idx)
-        return mu+logvar
+        return mu+torch.exp(0.5 * logvar)
 
     # def generate_inside(self, mean, dropout_logits):
     #     # scale = F.softplus(self.log_theta)#self.log_theta.exp()
@@ -322,7 +338,7 @@ class VAE(Plain_VAE):
         if random:
             z = self.reparameterize(mu, logvar)
         else:
-            z = mu+logvar #not using reparameterize
+            z = mu+torch.exp(0.5 * logvar) #not using reparameterize
         mu, dropout_logits = self.decoder(z)
         # scale = F.softplus(self.log_theta)#self.log_theta.exp()
         # loc = (mu+1e-5).log()-scale.pow(2)/2
@@ -338,6 +354,9 @@ class VAE(Plain_VAE):
             theta = F.softplus(self.log_theta)
             nb_logits = (mu+1e-5).log()-(theta+1e-5).log()
             distribution = ZeroInflatedNegativeBinomial(total_count=theta, logits=nb_logits,gate_logits = dropout_logits, validate_args=False)
+        elif self.distribution == 'zie':
+            loc = 1/(mu+1e-5)
+            distribution = ZeroInflatedExponential(rate=loc, gate_logits=dropout_logits, validate_args=False)
         # theta = F.softplus(self.log_theta)#self.log_theta.exp()
 
         # nb_logits = (mu+1e-5).log() - (theta+1e-5).log()

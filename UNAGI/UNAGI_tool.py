@@ -2,6 +2,7 @@
 This is the main module of UNAGI. It contains the UNAGI class, which is the main class of UNAGI. It also contains the functions to prepare the data, start the model training and start analysing the perturbation results. Initially, `setup_data` function should be used to prepare the data. Then, `setup_training`` function should be used to setup the training parameters. Finally, `run_UNAGI` function should be used to start the model training. After the model training is done, `analyse_UNAGI` function should be used to start the perturbation analysis.
 '''
 import subprocess
+from tracemalloc import start
 import numpy as np
 from .utils.attribute_utils import split_dataset_into_stage, get_all_adj_adata
 import os
@@ -235,7 +236,7 @@ class UNAGI:
         self.iDREM_parameters['Convergence_Likelihood'] = Convergence_Likelihood
         self.iDREM_parameters['Minimum_Standard_Deviation'] = Minimum_Standard_Deviation
 
-    def run_UNAGI(self,idrem_dir,CPO=True):
+    def run_UNAGI(self,idrem_dir,CPO=True,resume=False,resume_iteration=None):
         '''
         The function to launch the model training. The model will be trained iteratively. The number of iterations is specified by the `max_iter` parameter in the `setup_training` function.
         
@@ -246,7 +247,10 @@ class UNAGI:
         transcription_factor_file: str
             the directory to the transcription factor file. The transcription factor file is used to perform the CPO analysis.
         '''
-        for iteration in range(0,self.max_iter):
+        start_iteration = 0
+        if resume:
+            start_iteration = resume_iteration
+        for iteration in range(start_iteration,self.max_iter):
             
             if iteration != 0:
                 dir1 = os.path.join(self.data_folder , str(iteration))

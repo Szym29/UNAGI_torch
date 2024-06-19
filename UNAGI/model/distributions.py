@@ -2,6 +2,7 @@ import torch
 from torch import broadcast_shapes
 from torch.distributions.gamma import Gamma
 from torch.distributions import constraints
+from torch.distributions.exponential import Exponential
 from torch.distributions.utils import (
     broadcast_all,
     lazy_property,
@@ -77,7 +78,6 @@ class ZeroInflatedDistribution(TorchDistribution):
             temp_base_log_prob = self.base_dist.log_prob(temp_value)
             log_prob_minus_log_gate = -gate_logits + temp_base_log_prob#self.base_dist.log_prob(temp_value)
             log_gate = -torch.nn.functional.softplus(-gate_logits)
-            
             log_prob = log_prob_minus_log_gate + log_gate
             zero_log_prob = log_gate
             log_prob = torch.where(value == 0, zero_log_prob, log_prob)
@@ -184,6 +184,38 @@ class ZeroInflatedLogNormal(ZeroInflatedDistribution):
         validate_args=None
     ):
         base_dist = LogNormal(loc=loc,scale=scale,validate_args=False)
+        base_dist._validate_args = validate_args
+        super().__init__(
+            base_dist, gate=gate, gate_logits=gate_logits, validate_args=validate_args
+        )
+class ZeroInflatedExponential(ZeroInflatedDistribution):
+    """
+    A Zero Inflated Exponential distribution.
+
+    :param total_count: non-negative number of negative Bernoulli trials.
+    :type total_count: float or torch.Tensor
+    :param torch.Tensor probs: Event probabilities of success in the half open interval [0, 1).
+    :param torch.Tensor logits: Event log-odds for probabilities of success.
+    :param torch.Tensor gate: probability of extra zeros.
+    :param torch.Tensor gate_logits: logits of extra zeros.
+    """
+
+    arg_constraints = {
+        'rate': constraints.positive,
+        "gate": constraints.unit_interval,
+        "gate_logits": constraints.real,
+    }
+   
+    support = constraints.positive
+
+    def __init__(
+        self,
+        rate,
+        gate=None,
+        gate_logits=None,
+        validate_args=None
+    ):
+        base_dist = Exponential(rate=rate,validate_args=False)
         base_dist._validate_args = validate_args
         super().__init__(
             base_dist, gate=gate, gate_logits=gate_logits, validate_args=validate_args
